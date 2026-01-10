@@ -8,29 +8,25 @@
 import SwiftUI
 
 struct ContentView: View {
-    let events: [TextEvent]
+    @EnvironmentObject var streamManager: StreamManager
+    @State private var selectedStream: StreamConnection? = nil
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                        TextEventView(event: event)
-                        Divider()
-                    }
-                }
-            }
-            .onChange(of: events.count) { _, _ in
-                if let last = events.indices.last {
-                    proxy.scrollTo(last, anchor: .bottom)
-                }
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SidebarView(selectedStream: $selectedStream)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
+        } detail: {
+            if let stream = selectedStream {
+                EventListView(stream: stream)
+            } else {
+                ContentUnavailableView(
+                    "No Stream Selected",
+                    systemImage: "antenna.radiowaves.left.and.right",
+                    description: Text("Select or add a stream from the sidebar")
+                )
             }
         }
-        .frame(minWidth: 500, minHeight: 300)
-        .background(Color(nsColor: .textBackgroundColor))
+        .frame(minWidth: 700, minHeight: 400)
     }
-}
-
-#Preview {
-    ContentView(events: [TextEvent("id: 1\nevent: Hello world!\ndata: hello world!")])
 }

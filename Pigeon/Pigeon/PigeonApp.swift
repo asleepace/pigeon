@@ -10,16 +10,15 @@ internal import Combine
 
 @main
 struct PigeonApp: App {
-    @State var url: URL = URL(string: "https://consoledump.io/api/sse?id=31b2fe")!
-    @StateObject var stream = StreamManager()
+    @StateObject var streamManager = StreamManager()
     
     var body: some Scene {
         WindowGroup {
-            ContentView(events: self.stream.events)
-                .onAppear {
-                    self.stream.connect(to: self.url)
-                }
+            ContentView()
+                .environmentObject(streamManager)
         }
+        .windowStyle(.automatic)
+        .windowToolbarStyle(.unified(showsTitle: true))
     }
 }
 
