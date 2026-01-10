@@ -42,7 +42,7 @@ struct EventListView: View {
     }
     
     private var toolbarContent: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 4) {
             Circle()
                 .fill(streamManager.isConnected ? Color.green : Color.red)
                 .frame(width: 8, height: 8)
