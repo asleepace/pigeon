@@ -94,18 +94,20 @@ struct SidebarView: View {
     }
 }
 
+// MARK: SidebarView.swift
 struct StreamRow: View {
     let stream: StreamConnection
     @EnvironmentObject var streamManager: StreamManager
     
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Circle()
-                .fill(streamManager.isConnected ? .green : .gray)
-                .frame(width: 8, height: 8)
+                .fill(streamManager.isConnected ? Color.green : Color.gray.opacity(0.5))
+                .frame(width: 7, height: 7)
             Text(stream.name)
-            Spacer()
+                .lineLimit(1)
         }
+        .padding(.vertical, 2)
     }
 }
 

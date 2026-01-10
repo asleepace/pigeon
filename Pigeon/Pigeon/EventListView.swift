@@ -19,12 +19,14 @@ struct EventListView: View {
                         TextEventView(event: event)
                             .id(index)
                         Divider()
+                            .padding(.leading, 10)
                     }
                 }
+                .padding(.top, 1)
             }
             .onChange(of: streamManager.events.count) { _, _ in
                 if let last = streamManager.events.indices.last {
-                    withAnimation {
+                    withAnimation(.easeOut(duration: 0.2)) {
                         proxy.scrollTo(last, anchor: .bottom)
                     }
                 }
@@ -33,29 +35,35 @@ struct EventListView: View {
         .background(Color(nsColor: .textBackgroundColor))
         .navigationTitle(stream.name)
         .toolbar {
-            ToolbarItemGroup {
-                Circle()
-                    .fill(streamManager.isConnected ? .green : .red)
-                    .frame(width: 8, height: 8)
-                
-                Button {
-                    streamManager.events.removeAll()
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .help("Clear events")
-                
-                Button {
-                    if streamManager.isConnected {
-                        streamManager.disconnect()
-                    } else {
-                        try? streamManager.connect(to: URL(string: stream.url)!)
-                    }
-                } label: {
-                    Image(systemName: streamManager.isConnected ? "stop.fill" : "play.fill")
-                }
-                .help(streamManager.isConnected ? "Disconnect" : "Connect")
+            ToolbarItemGroup(placement: .primaryAction) {
+                toolbarContent
             }
+        }
+    }
+    
+    private var toolbarContent: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(streamManager.isConnected ? Color.green : Color.red)
+                .frame(width: 8, height: 8)
+            
+            Button {
+                streamManager.events.removeAll()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .help("Clear events")
+            
+            Button {
+                if streamManager.isConnected {
+                    streamManager.disconnect()
+                } else {
+                    streamManager.connect(to: URL(string: stream.url)!)
+                }
+            } label: {
+                Image(systemName: streamManager.isConnected ? "stop.fill" : "play.fill")
+            }
+            .help(streamManager.isConnected ? "Disconnect" : "Connect")
         }
     }
 }

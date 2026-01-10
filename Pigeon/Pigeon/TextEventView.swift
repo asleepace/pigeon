@@ -50,6 +50,122 @@ struct TextEventView: View {
         return array.map { formatPreview($0) }.joined(separator: " ")
     }
     
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            headerRow
+            
+            if isExpanded && hasComplexContent {
+                expandedContent
+                    .padding(.leading, 32)
+                    .padding(.trailing, 12)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+            }
+        }
+        .background(isExpanded ? Color.gray.opacity(0.08) : Color.clear)
+    }
+    
+    // MARK: - Header Row
+    
+    private var headerRow: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .frame(width: 10)
+                    .opacity(hasComplexContent ? 1 : 0.3)
+                
+                Text(timestamp)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary)
+                
+                badgeView
+                
+                Text(preview)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .lineLimit(isExpanded ? nil : 1)
+                    .truncationMode(.tail)
+                
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private var badgeView: some View {
+        Text(event.type ?? "message")
+            .font(.system(size: 9, weight: .medium, design: .monospaced))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(badgeColor)
+            .foregroundColor(badgeTextColor)
+            .cornerRadius(3)
+    }
+    
+    // MARK: - Expanded Content
+    
+    @ViewBuilder
+    private var expandedContent: some View {
+        if isSystemEvent {
+            codeBlock(formatJSON(event.data ?? ""))
+        } else if let array = parsedArray {
+            expandedArrayContent(array)
+        }
+    }
+    
+    private func expandedArrayContent(_ array: [Any]) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(array.enumerated()), id: \.offset) { index, item in
+                HStack(alignment: .top, spacing: 6) {
+                    Text("\(index)")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 14, alignment: .trailing)
+                    
+                    if isPrimitive(item) {
+                        Text(formatPreview(item))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(colorForPrimitive(item))
+                            .textSelection(.enabled)
+                    } else {
+                        Text(formatJSON(item))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.black.opacity(0.2))
+        .cornerRadius(4)
+    }
+    
+    private func codeBlock(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, design: .monospaced))
+            .textSelection(.enabled)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.2))
+            .cornerRadius(4)
+    }
+    
+    // MARK: - Formatting
+    
     private func formatPreview(_ value: Any) -> String {
         switch value {
         case let string as String:
@@ -62,32 +178,28 @@ struct TextEventView: View {
         case is NSNull:
             return "null"
         case let dict as [String: Any]:
-            return formatInline(dict, maxLength: 60)
+            return formatInline(dict, maxLength: 50)
         case let array as [Any]:
-            return formatInline(array, maxLength: 60)
+            return formatInline(array, maxLength: 50)
         default:
             return String(describing: value)
         }
     }
-
+    
     private func formatInline(_ dict: [String: Any], maxLength: Int) -> String {
         let pairs = dict.map { "\($0.key): \(formatInlineValue($0.value))" }
         let full = "{ " + pairs.joined(separator: ", ") + " }"
-        if full.count <= maxLength {
-            return full
-        }
+        if full.count <= maxLength { return full }
         return String(full.prefix(maxLength - 1)) + "…"
     }
-
+    
     private func formatInline(_ array: [Any], maxLength: Int) -> String {
         let items = array.map { formatInlineValue($0) }
         let full = "[" + items.joined(separator: ", ") + "]"
-        if full.count <= maxLength {
-            return full
-        }
+        if full.count <= maxLength { return full }
         return String(full.prefix(maxLength - 1)) + "…"
     }
-
+    
     private func formatInlineValue(_ value: Any) -> String {
         switch value {
         case let string as String:
@@ -100,124 +212,20 @@ struct TextEventView: View {
         case is NSNull:
             return "null"
         case let dict as [String: Any]:
-            let pairs = dict.map { "\($0.key): \(formatInlineValue($0.value))" }
-            return "{ " + pairs.joined(separator: ", ") + " }"
+            return "{ \(dict.count) }"
         case let array as [Any]:
-            let items = array.map { formatInlineValue($0) }
-            return "[" + items.joined(separator: ", ") + "]"
+            return "[\(array.count)]"
         default:
             return String(describing: value)
         }
     }
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header row
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isExpanded.toggle()
-                }
-            } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .frame(width: 12)
-                        .opacity(hasComplexContent ? 1 : 0.3)
-                    
-                    Text(timestamp)
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.secondary)
-                    
-                    Text(event.type ?? "message")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(badgeColor)
-                        .foregroundColor(badgeTextColor)
-                        .cornerRadius(3)
-                    
-                    Text(preview)
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .lineLimit(isExpanded ? nil : 1)
-                        .multilineTextAlignment(.leading)
-                    
-                    Spacer()
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 8)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            
-            // Expanded content
-            if isExpanded && hasComplexContent {
-                expandedContent
-                    .padding(.leading, 28)
-                    .padding(.trailing, 8)
-                    .padding(.bottom, 8)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .background(isExpanded ? Color.gray.opacity(0.08) : Color.clear)
-    }
-    
-    @ViewBuilder
-    private var expandedContent: some View {
-        if isSystemEvent {
-            codeBlock(formatJSON(event.data ?? ""))
-        } else if let array = parsedArray {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("\(index)")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary)
-                            .frame(width: 20, alignment: .trailing)
-                        
-                        if isPrimitive(item) {
-                            Text(formatPreview(item))
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(colorForPrimitive(item))
-                                .textSelection(.enabled)
-                        } else {
-                            Text(formatJSON(item))
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.primary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
-            }
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.black.opacity(0.15))
-            .cornerRadius(4)
-        }
-    }
-    
-    private func codeBlock(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, design: .monospaced))
-            .textSelection(.enabled)
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.black.opacity(0.15))
-            .cornerRadius(4)
-    }
-    
     private func colorForPrimitive(_ value: Any) -> Color {
         switch value {
-        case is String:
-            return .green
-        case is NSNumber:
-            return .blue
-        case is NSNull:
-            return .secondary
-        default:
-            return .primary
+        case is String: return .green
+        case is NSNumber: return .cyan
+        case is NSNull: return .secondary
+        default: return .primary
         }
     }
     
@@ -226,15 +234,14 @@ struct TextEventView: View {
         case "system": return .orange
         case "error": return .red
         case "warn", "warning": return .yellow
-        default: return Color.gray.opacity(0.3)
+        default: return Color(nsColor: .systemGray)
         }
     }
     
     private var badgeTextColor: Color {
         switch event.type?.lowercased() {
-        case "system", "error": return .white
         case "warn", "warning": return .black
-        default: return .primary
+        default: return .white
         }
     }
     
