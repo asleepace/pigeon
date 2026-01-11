@@ -7,22 +7,92 @@
 
 import SwiftUI
 
+struct CodeLine: View {
+    var code: String
+    var body: some View {
+        HStack {
+            Text(code)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .textSelection(.enabled)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct CodeBlock: View {
+    var code: String
+    
+    var body: some View {
+        HStack {
+            Text(code)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .textSelection(.enabled)
+            
+            Spacer()
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(code, forType: .string)
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct EventListLoadingView: View {
+    var streamName: String
+    var streamUrl: String
+    var body: some View {
+        VStack(spacing: 0) {
+            ContentUnavailableView(
+                streamName,
+                systemImage: "antenna.radiowaves.left.and.right",
+                description: Text("Waiting for incoming events, to get started make an http request to the following endpoint:")
+            )
+            CodeLine(code: "curl -d \"hello, world\" \(streamUrl)")
+        }
+        .padding(.vertical, 64.0)
+    }
+}
+
+
 struct EventListView: View {
     let stream: StreamConnection
     @EnvironmentObject var streamManager: StreamManager
     
+    var messages: [TextEvent] {
+        streamManager.events.filter { $0.type == "message" }
+    }
+    
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(streamManager.events.enumerated().filter({ $0.element.type == "message" })), id: \.offset) { index, event in
-                        TextEventView(event: event)
-                            .id(index)
-                        Divider()
-                            .padding(.leading, 10)
+                if messages.isEmpty {
+                    EventListLoadingView(streamName: stream.name, streamUrl: stream.url)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(messages.enumerated()), id: \.offset) { index, event in
+                            TextEventView(event: event)
+                                .id(index)
+                            Divider()
+                                .padding(.leading, 10)
+                        }
                     }
+                    .padding(.top, 1)
                 }
-                .padding(.top, 1)
             }
             .onChange(of: streamManager.events.count) { _, _ in
                 if let last = streamManager.events.indices.last {
