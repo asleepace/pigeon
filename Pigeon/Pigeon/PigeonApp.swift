@@ -28,12 +28,15 @@ extension URL {
     var isLocalHost: Bool {
         guard let host = self.host() else { return false }
         guard !host.isEmpty else { return true }
-        print("[URL] isLocalHost: \(host)")
-        return host.contains("localhost")
+        return host.contains("localhost") || host.contains("127.0.0.1")
     }
 }
 
-
+// MARK: Stream Manager
+// Coordinate text/event-stream connections from either remote hosts or the internal
+// local http server. Other applications should be able to send basic HTTP requests
+// to a local url such as http://localhost:8787 and have the body broadcasted to
+// the relevant stream.
 class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     
     @Published var url: URL?
@@ -63,13 +66,13 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     
     // MARK: - HttpDelegate
     
-    func httpServer(_ server: HttpServer, didConnect sseClient: SSEClient) {
+    func httpServer(_ server: HttpServer, didConnect sseClient: Response) {
         print("[app] SSEClient connected: \(sseClient)")
-        sseClient.sendHeaders()
-        sseClient.send(data: "{\"status\" : \"connected\"}")
+        sseClient.startEventStream()
+        sseClient.sendEvent("{\"status\" : \"connected\"}")
     }
     
-    func httpServer(_ server: HttpServer, didDisconnect sseClient: SSEClient) {
+    func httpServer(_ server: HttpServer, didDisconnect sseClient: Response) {
         print("[app] SSEClient disconnected: \(sseClient)")
     }
     

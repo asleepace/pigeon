@@ -8,38 +8,7 @@ import Foundation
 import Network
 
 enum HttpError: Error {
-    case noData
     case invalidData
-}
-
-struct HttpHeaders {
-    var headers: [String: String] = [:]
-    
-    init(headers: [String : String]) {
-        self.headers = headers
-    }
-    
-    func has(name: String) -> Bool {
-        return headers.keys.contains(name)
-    }
-    
-    func get(name: String) -> String? {
-        return headers[name]
-    }
-    
-    mutating func set(name: String, value: String) {
-        headers[name] = value
-    }
-    
-    mutating func delete(name: String) {
-        headers.removeValue(forKey: name)
-    }
-    
-    func toString() -> String {
-        return headers.map(\.key).sorted().reduce("") { (acc, key) in
-            "\(acc)\(key): \(self.headers[key]!)\r\n"
-        }
-    }
 }
 
 struct HttpRequest {
@@ -74,12 +43,6 @@ struct HttpRequest {
         }
         headers = hdrs
     }
-}
-
-enum HttpVersion: String {
-    case v1_0 = "HTTP/1.0"
-    case v1_1 = "HTTP/1.1"
-    case v2_0 = "HTTP/2.0"
 }
 
 struct HttpResponse {
@@ -163,15 +126,15 @@ struct HttpResponse {
 
 protocol HttpDelegate {
     func httpServer(_ server: HttpServer, didReceiveRequest request: HttpRequest) -> HttpResponse
-    func httpServer(_ server: HttpServer, didConnect sseClient: SSEClient) -> Void
-    func httpServer(_ server: HttpServer, didDisconnect sseClient: SSEClient) -> Void
+    func httpServer(_ server: HttpServer, didConnect sseClient: Response) -> Void
+    func httpServer(_ server: HttpServer, didDisconnect sseClient: Response) -> Void
 }
 
 class HttpServer {
     private var listener: NWListener?
     private var delegate: HttpDelegate
     
-    private(set) var sseClients: [SSEClient] = []
+    private(set) var sseClients: [Response] = []
     
     let port: NWEndpoint.Port
     var url: URL?
@@ -182,9 +145,8 @@ class HttpServer {
     }
     
     func handleSSE(connection: NWConnection) {
-        let client = SSEClient(connection: connection)
+        let client = Response(connection: connection)
         self.sseClients.append(client)
-        client.sendHeaders()
         self.delegate.httpServer(self, didConnect: client)
         
         // Monitor for disconnect
@@ -228,14 +190,14 @@ class HttpServer {
     
     // MARK: - SSE Methods
     
-    private func removeClient(_ client: SSEClient) {
+    private func removeClient(_ client: Response) {
         sseClients.removeAll { $0.id == client.id }
         self.delegate.httpServer(self, didDisconnect: client)
     }
     
     func broadcast(event: String? = nil, data: String, id: String? = nil) {
         for client in sseClients {
-            client.send(event: event, data: data, id: id)
+            client.sendEvent(data, event: event, id: id)
         }
     }
 }
