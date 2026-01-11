@@ -63,14 +63,22 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     
     // MARK: - HttpDelegate
     
+    func httpServer(_ server: HttpServer, didConnect sseClient: SSEClient) {
+        print("[app] SSEClient connected: \(sseClient)")
+        sseClient.sendHeaders()
+        sseClient.send(data: "{\"status\" : \"connected\"}")
+    }
+    
+    func httpServer(_ server: HttpServer, didDisconnect sseClient: SSEClient) {
+        print("[app] SSEClient disconnected: \(sseClient)")
+    }
+    
     func httpServer(_ server: HttpServer, didReceiveRequest request: HttpRequest) -> HttpResponse {
         switch request.method {
         case "OPTIONS":
             return HttpResponse(status: 200).withCORS()
         case "POST":
             self.handleIncomingRequest(request)
-            return HttpResponse(status: 200)
-        case "GET":
             return HttpResponse(status: 200)
         default:
             return HttpResponse(status: 404)

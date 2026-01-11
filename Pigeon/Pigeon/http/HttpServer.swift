@@ -12,6 +12,36 @@ enum HttpError: Error {
     case invalidData
 }
 
+struct HttpHeaders {
+    var headers: [String: String] = [:]
+    
+    init(headers: [String : String]) {
+        self.headers = headers
+    }
+    
+    func has(name: String) -> Bool {
+        return headers.keys.contains(name)
+    }
+    
+    func get(name: String) -> String? {
+        return headers[name]
+    }
+    
+    mutating func set(name: String, value: String) {
+        headers[name] = value
+    }
+    
+    mutating func delete(name: String) {
+        headers.removeValue(forKey: name)
+    }
+    
+    func toString() -> String {
+        return headers.map(\.key).sorted().reduce("") { (acc, key) in
+            "\(acc)\(key): \(self.headers[key]!)\r\n"
+        }
+    }
+}
+
 struct HttpRequest {
     let method: String
     let path: String
@@ -133,11 +163,15 @@ struct HttpResponse {
 
 protocol HttpDelegate {
     func httpServer(_ server: HttpServer, didReceiveRequest request: HttpRequest) -> HttpResponse
+    func httpServer(_ server: HttpServer, didConnect sseClient: SSEClient) -> Void
+    func httpServer(_ server: HttpServer, didDisconnect sseClient: SSEClient) -> Void
 }
 
 class HttpServer {
     private var listener: NWListener?
     private var delegate: HttpDelegate
+    
+    private(set) var sseClients: [SSEClient] = []
     
     let port: NWEndpoint.Port
     var url: URL?
@@ -147,12 +181,36 @@ class HttpServer {
         self.port = port
     }
     
+    func handleSSE(connection: NWConnection) {
+        let client = SSEClient(connection: connection)
+        self.sseClients.append(client)
+        client.sendHeaders()
+        self.delegate.httpServer(self, didConnect: client)
+        
+        // Monitor for disconnect
+        connection.stateUpdateHandler = { [weak self] state in
+            if case .cancelled = state {
+                self?.removeClient(client)
+            } else if case .failed = state {
+                self?.removeClient(client)
+            }
+        }
+    }
+    
     func connect() throws {
         self.listener = try NWListener(using: .tcp, on: port)
         self.listener?.newConnectionHandler = { [weak self] connection in
             connection.start(queue: .main)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, _ in
                 guard let self, let request = try? HttpRequest(data) else { return }
+                
+                // handle server side events here:
+                if request.method == "GET" && request.headers["Accept"] == "text/event-stream" {
+                    self.handleSSE(connection: connection)
+                    return
+                }
+                
+                // otherwise handle as a normal response:
                 let response = self.delegate.httpServer(self, didReceiveRequest: request)
                 connection.send(content: response.toData(), completion: .contentProcessed { _ in
                     connection.cancel()
@@ -166,5 +224,18 @@ class HttpServer {
     func disconnect() {
         self.listener?.cancel()
         self.listener = nil
+    }
+    
+    // MARK: - SSE Methods
+    
+    private func removeClient(_ client: SSEClient) {
+        sseClients.removeAll { $0.id == client.id }
+        self.delegate.httpServer(self, didDisconnect: client)
+    }
+    
+    func broadcast(event: String? = nil, data: String, id: String? = nil) {
+        for client in sseClients {
+            client.send(event: event, data: data, id: id)
+        }
     }
 }
