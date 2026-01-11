@@ -103,7 +103,7 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     func textEventStreamDidError(error: Error) {
-        print("Stream error: \(error)")
+        print("[textEventStreamDidError] error: \(error.localizedDescription)")
         self.isConnected = false
     }
 }

@@ -4,7 +4,11 @@
 //
 //  Created by Colin Teahan on 1/10/26.
 //
-// SidebarView.swift
+//  Displays left-hand side bar with list of active connections.
+//  The default initial connection should be the localhost
+//  server in this application.
+//
+
 import SwiftUI
 
 struct StreamConnection: Identifiable, Hashable {
@@ -19,6 +23,7 @@ struct SidebarView: View {
     @Binding var selectedStream: StreamConnection?
     
     @State private var streams: [StreamConnection] = [
+        StreamConnection(name: "Localhost", url: "https://localhost:8787/"),
         StreamConnection(name: "Console Dump", url: "https://consoledump.io/api/sse?id=31b2fe")
     ]
     @State private var isAddingStream = false
@@ -40,6 +45,10 @@ struct SidebarView: View {
             if let stream = newStream {
                 streamManager.connect(to: URL(string: stream.url)!)
             }
+        }
+        .onAppear {
+            guard self.selectedStream == nil else { return }
+            self.selectedStream = streams.first
         }
     }
     

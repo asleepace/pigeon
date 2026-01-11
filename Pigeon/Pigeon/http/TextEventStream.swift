@@ -22,8 +22,8 @@ struct TextEvent {
             if (line.starts(with: "id: ")) {
                 id = String(line.dropFirst(4))
             }
-            else if (line.starts(with: "type: ")) {
-                type = String(line.dropFirst(6))
+            else if (line.starts(with: "event: ")) {
+                type = String(line.dropFirst(7))
             }
             else if (line.starts(with: "data: ")) {
                 data = String(line.dropFirst(6))
@@ -132,12 +132,12 @@ class TextEventStream: NSObject, URLSessionDataDelegate {
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        print("[TextEventStream] didCompleteWithError: \(String(describing: error?.localizedDescription))")
+        print("[TextEventStream] didCompleteWithError: \(error?.localizedDescription ?? "nil")")
         self.delegate?.textEventStreamDidError(error: error ?? Errors.unknownNetworkError)
     }
     
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: (any Error)?) {
-        print("[TextEventStream] didBecomeInvalidWithError: \(String(describing: error?.localizedDescription))")
+        print("[TextEventStream] didBecomeInvalidWithError: \(error?.localizedDescription ?? "nil")")
         self.delegate?.textEventStreamDidError(error: error ?? Errors.unknownNetworkError)
         self.task = nil
     }
