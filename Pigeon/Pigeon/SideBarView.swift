@@ -104,8 +104,10 @@ struct StreamRow: View {
             Circle()
                 .fill(streamManager.isConnected ? Color.green : Color.gray.opacity(0.5))
                 .frame(width: 7, height: 7)
+                .padding(.leading, 3)
             Text(stream.name)
                 .lineLimit(1)
+                .padding(.leading, 2)
         }
         .padding(.vertical, 2)
     }

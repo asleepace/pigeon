@@ -15,9 +15,10 @@ struct TextEvent {
     
     init(_ chunk: String) {
         var id: String = ""
-        var type: String?
+        var type: String = "message"
         var data: String?
         chunk.split(separator: "\n").forEach { line in
+            print(line)
             if (line.starts(with: "id: ")) {
                 id = String(line.dropFirst(4))
             }
@@ -28,6 +29,12 @@ struct TextEvent {
                 data = String(line.dropFirst(6))
             }
         }
+        
+        // system events will be JSON objects {}
+        if data?.hasPrefix("{") == true && data?.hasSuffix("}") == true {
+            type = "system"
+        }
+        
         self.type = type
         self.data = data
         self.id = id

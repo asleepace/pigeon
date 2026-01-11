@@ -15,7 +15,7 @@ struct EventListView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(Array(streamManager.events.enumerated()), id: \.offset) { index, event in
+                    ForEach(Array(streamManager.events.enumerated().filter({ $0.element.type == "message" })), id: \.offset) { index, event in
                         TextEventView(event: event)
                             .id(index)
                         Divider()
