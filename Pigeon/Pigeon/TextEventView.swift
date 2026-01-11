@@ -42,10 +42,10 @@ struct TextEventView: View {
     
     private var preview: String {
         if isSystemEvent {
-            return event.data ?? "—"
+            return event.data ?? "—-"
         }
         guard let array = parsedArray else {
-            return event.data ?? "—"
+            return event.data ?? "—-"
         }
         return array.map { formatPreview($0) }.joined(separator: " ")
     }
@@ -85,7 +85,7 @@ struct TextEventView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 
-                badgeView
+                // badgeView
                 
                 Text(preview)
                     .font(.system(size: 11, design: .monospaced))
@@ -102,22 +102,22 @@ struct TextEventView: View {
         .buttonStyle(.plain)
     }
     
-    private var badgeView: some View {
-        Text(event.type ?? "message")
-            .font(.system(size: 9, weight: .medium, design: .monospaced))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(badgeColor)
-            .foregroundColor(badgeTextColor)
-            .cornerRadius(3)
-    }
+//    private var badgeView: some View {
+//        Text(event.type ?? "message")
+//            .font(.system(size: 9, weight: .medium, design: .monospaced))
+//            .padding(.horizontal, 5)
+//            .padding(.vertical, 2)
+//            .background(badgeColor)
+//            .foregroundColor(badgeTextColor)
+//            .cornerRadius(3)
+//    }
     
     // MARK: - Expanded Content
     
     @ViewBuilder
     private var expandedContent: some View {
         if isSystemEvent {
-            codeBlock(formatJSON(event.data ?? ""))
+            expandedArrayContent([formatJSON(event.data ?? "")])
         } else if let array = parsedArray {
             expandedArrayContent(array)
         }
@@ -127,10 +127,13 @@ struct TextEventView: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(array.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .top, spacing: 6) {
-                    Text("\(index)")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 14, alignment: .trailing)
+                    
+//                    if depth > 0 {
+//                        Text("\(index)")
+//                            .font(.system(size: 10, design: .monospaced))
+//                            .foregroundColor(.secondary)
+//                            .frame(width: 14, alignment: .trailing)
+//                    }
                     
                     if isPrimitive(item) {
                         Text(formatPreview(item))
@@ -234,7 +237,7 @@ struct TextEventView: View {
         case "system": return .orange
         case "error": return .red
         case "warn", "warning": return .yellow
-        default: return Color(nsColor: .systemGray)
+        default: return Color(nsColor: .darkGray)
         }
     }
     
