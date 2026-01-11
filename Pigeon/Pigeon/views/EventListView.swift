@@ -64,7 +64,6 @@ struct EventListLoadingView: View {
             )
             CodeLine(code: "curl -d \"hello, world\" \(streamUrl)")
         }
-        .padding(.vertical, 64.0)
     }
 }
 
@@ -79,10 +78,12 @@ struct EventListView: View {
     
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                if messages.isEmpty {
-                    EventListLoadingView(streamName: stream.name, streamUrl: stream.url)
-                } else {
+            if messages.isEmpty {
+                EventListLoadingView(streamName: stream.name, streamUrl: stream.url)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.bottom, 44.0)
+            } else {
+                ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(messages.enumerated()), id: \.offset) { index, event in
                             TextEventView(event: event)
@@ -93,11 +94,11 @@ struct EventListView: View {
                     }
                     .padding(.top, 1)
                 }
-            }
-            .onChange(of: streamManager.events.count) { _, _ in
-                if let last = streamManager.events.indices.last {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        proxy.scrollTo(last, anchor: .bottom)
+                .onChange(of: streamManager.events.count) { _, _ in
+                    if let last = streamManager.events.indices.last {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(last, anchor: .bottom)
+                        }
                     }
                 }
             }
