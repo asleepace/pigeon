@@ -42,10 +42,11 @@ struct EventListView: View {
     }
     
     private var toolbarContent: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             Circle()
                 .fill(streamManager.isConnected ? Color.green : Color.red)
                 .frame(width: 8, height: 8)
+                .padding(.horizontal, 8.0)
             
             Button {
                 streamManager.events.removeAll()
@@ -61,9 +62,10 @@ struct EventListView: View {
                     streamManager.connect(to: URL(string: stream.url)!)
                 }
             } label: {
-                Image(systemName: streamManager.isConnected ? "stop.fill" : "play.fill")
+                Image(systemName: streamManager.isConnected ? "pause.fill" : "play.fill")
             }
             .help(streamManager.isConnected ? "Disconnect" : "Connect")
         }
+        .padding(.horizontal, 6.0)
     }
 }
