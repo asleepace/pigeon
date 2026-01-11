@@ -117,7 +117,7 @@ struct TextEventView: View {
     @ViewBuilder
     private var expandedContent: some View {
         if isSystemEvent {
-            expandedArrayContent([formatJSON(event.data ?? "")])
+            codeBlock(formatJSON(event.data ?? ""))
         } else if let array = parsedArray {
             expandedArrayContent(array)
         }
@@ -147,6 +147,7 @@ struct TextEventView: View {
                             .textSelection(.enabled)
                     }
                 }
+                .focusable(true, interactions: .automatic)
             }
         }
         .padding(.horizontal, 8)
