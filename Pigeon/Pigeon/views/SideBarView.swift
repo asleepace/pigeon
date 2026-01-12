@@ -21,9 +21,8 @@ struct StreamConnection: Identifiable, Hashable {
 struct SidebarView: View {
     @EnvironmentObject var streamManager: StreamManager
     @Binding var selectedStream: StreamConnection?
-    
     @State private var streams: [StreamConnection] = [
-        StreamConnection(name: "Localhost", url: "https://localhost:8787/"),
+        StreamConnection(name: "Localhost", url: "http://localhost:8787/"), // NOTE: HTTP only!
         StreamConnection(name: "Console Dump", url: "https://consoledump.io/api/sse?id=31b2fe")
     ]
     @State private var isAddingStream = false

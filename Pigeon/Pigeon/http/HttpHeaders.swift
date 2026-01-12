@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum HttpVersion: String {
+enum HttpVersion: String, RawRepresentable {
     case v1_0 = "HTTP/1.0"
     case v1_1 = "HTTP/1.1"
     case v2_0 = "HTTP/2.0"
@@ -52,7 +52,7 @@ struct HttpHeaders {
     // MARK: - Serialization
     
     func toString() -> String {
-        var lines = ["\(httpVersion.rawValue) \(status) \(statusText)"]
+        var lines = ["\(httpVersion) \(status) \(statusText)"]
         for (key, value) in headers {
             lines.append("\(key): \(value)")
         }

@@ -104,6 +104,7 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     func httpServer(_ server: HttpServer, didReceiveRequest request: HttpRequest) -> HttpResponse {
+        print("[app] didReceiveRequest: \(request.method) \(request.path) \(request.headers)")
         switch request.method {
         case "OPTIONS":
             return HttpResponse(status: 200).withCORS()
@@ -116,7 +117,10 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     func handleIncomingRequest(_ request: HttpRequest) {
-        guard let body = request.body, !body.isEmpty else { return }
+        guard let body = request.body, !body.isEmpty else {
+            print("[app] incoming request missing body...")
+            return
+        }
         let textEvent = TextEvent("data: \(body)")
         textEvent.debug()
         self.events.append(textEvent)

@@ -61,9 +61,9 @@ struct TextEventListLoadingView: View {
                   streamUrl,
                   method: .POST,
                   headers: [
-                    "Content-Type": "text/plain"
+                    "Content-Type": "text/plain",
                   ],
-                  body: "Hello, world!",
+                  body: "Hello, world!".data(using: .utf8),
             )
             response.debugPrint()
         } catch {
@@ -75,23 +75,21 @@ struct TextEventListLoadingView: View {
     var streamUrl: String
     var body: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 4.0)
             ContentUnavailableView(
                 streamName,
                 systemImage: "antenna.radiowaves.left.and.right",
                 description: Text("Waiting for incoming events, to get started make an http request to the following endpoint:")
             )
             CodeLine(code: "curl -d \"hello, world\" \(streamUrl)")
-            
+            Spacer(minLength: 4.0)
             Button("Send Event") {
                 Task {
                     await sendTestEvent()
                 }
             }
-            .padding(.horizontal, 8.0)
-            .padding(.vertical, 4.0)
-            .background(Color.blue)
             .foregroundStyle(Color.white)
-            .cornerRadius(4)
+            .background(Color.blue, in: RoundedRectangle(cornerRadius: 4))
         }
     }
 }

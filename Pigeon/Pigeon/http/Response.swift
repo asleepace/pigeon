@@ -15,9 +15,8 @@ class Response {
         "Cache-Control": "no-cache",
         "Access-Control-Allow-Origin": "*"
     ])
-    
+
     var body: String?
-    
     private(set) var isReady = false
     private(set) var isClosed = false
     

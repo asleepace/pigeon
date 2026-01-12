@@ -52,7 +52,7 @@ struct HttpResponse {
     var body: String?
     
     func toData() -> Data {
-        var lines = ["\(httpVersion) \(status) \(statusText)"]
+        var lines = ["\(httpVersion.rawValue) \(status) \(statusText)"]
         
         // Add content length
         lines.append("Content-Length: \(body?.utf8.count ?? 0)")
@@ -161,27 +161,51 @@ class HttpServer {
         }
     }
     
-    func connect() throws {
-        self.listener = try NWListener(using: .tcp, on: port)
-        self.listener?.newConnectionHandler = { [weak self] connection in
-            connection.start(queue: self!.queue)  // ← background queue
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, _ in
-                guard let self, let request = try? HttpRequest(data) else { return }
-                
-                // handle server side events here:
+    func receiveRequest(connection: NWConnection, accumulated: Data = Data()) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, _ in
+            guard let self else { return }
+            
+            var buffer = accumulated
+            if let data { buffer.append(data) }
+            
+            // Check if we have full request (headers + body)
+            if let request = try? HttpRequest(buffer), self.hasCompleteBody(request, data: buffer) {
+                // Handle complete request
                 if request.method == "GET" && request.headers["Accept"] == "text/event-stream" {
                     self.handleSSE(connection: connection)
                     return
                 }
                 
-                // otherwise handle as a normal response:
                 DispatchQueue.main.async {
                     let response = self.delegate.httpServer(self, didReceiveRequest: request)
-                    connection.send(content: response.toData(), completion: .contentProcessed { _ in
-                        connection.cancel()
-                    })
+                    self.queue.async {
+                        connection.send(content: response.toData(), completion: .contentProcessed { _ in
+                            connection.cancel()
+                        })
+                    }
                 }
+            } else if !isComplete {
+                // Keep reading
+                self.receiveRequest(connection: connection, accumulated: buffer)
             }
+        }
+    }
+
+    private func hasCompleteBody(_ request: HttpRequest, data: Data) -> Bool {
+        guard let contentLength = request.headers["Content-Length"],
+              let length = Int(contentLength) else {
+            return true  // No content-length = no body expected
+        }
+        let bodyLength = request.body?.utf8.count ?? 0
+        return bodyLength >= length
+    }
+    
+    func connect() throws {
+        self.listener = try NWListener(using: .tcp, on: port)
+        self.listener?.newConnectionHandler = { [weak self] connection in
+            guard let self else { return }
+            connection.start(queue: self.queue)
+            self.receiveRequest(connection: connection)  // Use new method
         }
         self.listener?.start(queue: queue)
         self.url = URL(string: "http://localhost:\(port)")!
