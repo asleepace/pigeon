@@ -67,18 +67,38 @@ extension URL {
 class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
 
     @Published var url: URL?
-    @Published var events: [TextEvent] = []
+    @Published var eventsByStream: [String: [TextEvent]] = [:]
     @Published var isConnected: Bool = false
     @Published var connectionError: String?
 
     private var stream: TextEventStream?
     private var httpServer: HttpServer?
 
+    /// Get events for a specific stream URL
+    func events(for streamUrl: String) -> [TextEvent] {
+        eventsByStream[streamUrl] ?? []
+    }
+
+    /// Clear events for a specific stream URL
+    func clearEvents(for streamUrl: String) {
+        eventsByStream[streamUrl] = []
+    }
+
     func connect(to url: URL) {
+        // Disconnect previous stream but preserve its events
+        self.stream?.disconnect()
+        self.httpServer?.disconnect()
+
         self.url = url
         self.connectionError = nil
-        self.stream?.disconnect()
-        self.events = []
+        self.isConnected = false
+
+        // Initialize event array for this stream if needed
+        let urlKey = url.absoluteString
+        if eventsByStream[urlKey] == nil {
+            eventsByStream[urlKey] = []
+        }
+
         if url.isLocalHost {
             self.httpServer = HttpServer(port: 8787, delegate: self)
             do {
@@ -90,7 +110,7 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
         self.stream = TextEventStream(url, delegate: self)
         self.stream?.connect()
     }
-    
+
     func disconnect() {
         self.stream?.disconnect()
         self.httpServer?.disconnect()
@@ -122,14 +142,16 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     
     func handleIncomingRequest(_ request: HttpRequest) {
         guard let body = request.body, !body.isEmpty else { return }
+        guard let urlKey = self.url?.absoluteString else { return }
         let textEvent = TextEvent("data: \(body)")
-        self.events.append(textEvent)
+        eventsByStream[urlKey, default: []].append(textEvent)
     }
-    
+
     // MARK: - TextEventStreamDelegate
-    
+
     func textEventStreamDidReceive(textEvent: TextEvent) {
-        self.events.append(textEvent)
+        guard let urlKey = self.url?.absoluteString else { return }
+        eventsByStream[urlKey, default: []].append(textEvent)
         self.isConnected = true
     }
     

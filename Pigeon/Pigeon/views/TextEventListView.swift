@@ -96,11 +96,11 @@ struct TextEventListLoadingView: View {
 struct TextEventListView: View {
     let stream: StreamConnection
     @EnvironmentObject var streamManager: StreamManager
-    
+
     var messages: [TextEvent] {
-        streamManager.events.filter { $0.type == "message" }
+        streamManager.events(for: stream.url).filter { $0.type == "message" }
     }
-    
+
     var body: some View {
         ScrollViewReader { proxy in
             if messages.isEmpty {
@@ -119,11 +119,9 @@ struct TextEventListView: View {
                     }
                     .padding(.top, 1)
                 }
-                .onChange(of: streamManager.events.count) { _, _ in
-                    if let last = streamManager.events.indices.last {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo(last, anchor: .bottom)
-                        }
+                .onChange(of: streamManager.events(for: stream.url).count) { _, _ in
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo(messages.count - 1, anchor: .bottom)
                     }
                 }
             }
@@ -143,9 +141,9 @@ struct TextEventListView: View {
                 .fill(streamManager.isConnected ? Color.green : Color.red)
                 .frame(width: 8, height: 8)
                 .padding(.horizontal, 8.0)
-            
+
             Button {
-                streamManager.events.removeAll()
+                streamManager.clearEvents(for: stream.url)
             } label: {
                 Image(systemName: "trash")
             }
