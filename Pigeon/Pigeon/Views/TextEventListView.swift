@@ -76,6 +76,7 @@ struct EmptyStateView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            Spacer(minLength: 4.0)
         }
     }
 

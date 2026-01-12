@@ -16,7 +16,7 @@ struct TextEventView: View {
 
     private var timestamp: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
+        formatter.dateFormat = "HH:mm:ss"
         return formatter.string(from: event.timestamp)
     }
 
@@ -201,11 +201,13 @@ struct JSONTreeView: View {
                     .foregroundColor(.secondary)
             }
             VStack(alignment: .leading, spacing: 1) {
-                ForEach(object.keys.sorted(), id: \.self) { key in
+                let sortedKeys = object.keys.sorted()
+                ForEach(Array(sortedKeys.enumerated()), id: \.element) { index, key in
                     JSONKeyValueRow(
                         key: key,
                         value: object[key]!,
                         isExpanded: expandedKeys.contains(key),
+                        isLast: index == sortedKeys.count - 1,
                         onToggle: { toggleKey(key) }
                     )
                 }
@@ -232,6 +234,7 @@ struct JSONKeyValueRow: View {
     let key: String
     let value: Any
     let isExpanded: Bool
+    var isLast: Bool = false
     let onToggle: () -> Void
 
     private var isExpandable: Bool {
@@ -245,6 +248,10 @@ struct JSONKeyValueRow: View {
             return "[\(array.count)]"
         }
         return JSONFormatter.formatPreview(value)
+    }
+
+    private var comma: String {
+        isLast ? "" : ","
     }
 
     var body: some View {
@@ -275,7 +282,7 @@ struct JSONKeyValueRow: View {
 
                 // Value or preview
                 if !isExpanded || !isExpandable {
-                    Text(valuePreview)
+                    Text(valuePreview + comma)
                         .font(AppTheme.Fonts.mono)
                         .foregroundColor(JSONFormatter.colorForValue(value))
                         .textSelection(.enabled)
@@ -310,13 +317,29 @@ struct JSONArrayView: View {
                     .foregroundColor(.secondary)
             }
             VStack(alignment: .leading, spacing: 1) {
-                ForEach(Array(array.enumerated()), id: \.offset) { _, item in
+                ForEach(Array(array.enumerated()), id: \.offset) { index, item in
+                    let isLast = index == array.count - 1
+                    let comma = isLast ? "" : ","
                     if let dict = item as? [String: Any] {
-                        JSONTreeView(object: dict, showBrackets: true)
+                        HStack(alignment: .top, spacing: 0) {
+                            JSONTreeView(object: dict, showBrackets: true)
+                            if !isLast {
+                                Text(",")
+                                    .font(AppTheme.Fonts.mono)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     } else if let arr = item as? [Any] {
-                        JSONArrayView(array: arr, showBrackets: true)
+                        HStack(alignment: .top, spacing: 0) {
+                            JSONArrayView(array: arr, showBrackets: true)
+                            if !isLast {
+                                Text(",")
+                                    .font(AppTheme.Fonts.mono)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     } else {
-                        Text(JSONFormatter.formatPreview(item))
+                        Text(JSONFormatter.formatPreview(item) + comma)
                             .font(AppTheme.Fonts.mono)
                             .foregroundColor(JSONFormatter.colorForValue(item))
                             .textSelection(.enabled)
