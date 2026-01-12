@@ -242,6 +242,8 @@ struct TextEventListView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 ConnectionStatusView(state: streamManager.connectionState)
+                    .padding(.leading, 16.0)
+                    .padding(.trailing, 4.0)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
