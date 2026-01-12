@@ -69,3 +69,44 @@ console.debug = (...args) => dump('debug:', ...args)
 ```
 
 Now all your existing console.log() , console.error() , etc. calls will automatically stream to your ConsoleDump session.
+
+
+## TODO: Supported Channels
+
+### 1. Unix Domain Sockets
+
+Lowest latency for local IPC, no TCP overhead:
+
+```bash
+# CLI side
+echo "log message" | nc -U /tmp/consoledump.sock
+```
+
+### 2. UDP
+
+Fire-and-forget, minimal overhead (fine for logs where occasional loss is acceptable):
+
+```bash
+echo "log message" | nc -u localhost 9999
+```
+
+### 3. Named Pipe (FIFO)
+
+Zero network overhead, just pipe directly:
+
+```bash
+# App creates:
+mkfifo /tmp/consoledump
+
+# CLI just writes:
+echo "log message" > /tmp/consoledump
+
+# Or pipe directly:
+my-command 2>&1 > /tmp/consoledump
+```
+
+### 4. WebSocket (persistent connection)
+
+If you're already sending many logs, one persistent connection beats repeated HTTP handshakes.
+
+For CLI ergonomics, the named pipe or Unix socket approaches are nice because you can just pipe directly without a helper binary:
