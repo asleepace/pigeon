@@ -310,23 +310,16 @@ struct JSONArrayView: View {
                     .foregroundColor(.secondary)
             }
             VStack(alignment: .leading, spacing: 1) {
-                ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                    HStack(spacing: 4) {
-                        Text("\(index)")
-                            .font(AppTheme.Fonts.monoSmall)
-                            .foregroundColor(.secondary)
-                            .frame(width: 20, alignment: .trailing)
-
-                        if let dict = item as? [String: Any] {
-                            JSONTreeView(object: dict, showBrackets: true)
-                        } else if let arr = item as? [Any] {
-                            JSONArrayView(array: arr, showBrackets: true)
-                        } else {
-                            Text(JSONFormatter.formatPreview(item))
-                                .font(AppTheme.Fonts.mono)
-                                .foregroundColor(JSONFormatter.colorForValue(item))
-                                .textSelection(.enabled)
-                        }
+                ForEach(Array(array.enumerated()), id: \.offset) { _, item in
+                    if let dict = item as? [String: Any] {
+                        JSONTreeView(object: dict, showBrackets: true)
+                    } else if let arr = item as? [Any] {
+                        JSONArrayView(array: arr, showBrackets: true)
+                    } else {
+                        Text(JSONFormatter.formatPreview(item))
+                            .font(AppTheme.Fonts.mono)
+                            .foregroundColor(JSONFormatter.colorForValue(item))
+                            .textSelection(.enabled)
                     }
                 }
             }
