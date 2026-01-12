@@ -79,53 +79,63 @@ struct TextEventView: View {
     // MARK: - Header Row
 
     private var headerRow: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isExpanded.toggle()
-            }
-        } label: {
-            HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.md) {
-                // Expand chevron
+        HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.md) {
+            // Expand chevron (clickable)
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isExpanded.toggle()
+                }
+            } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.secondary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .frame(width: 10)
                     .opacity(hasComplexContent ? 1 : 0.3)
-
-                // Timestamp
-                Text(timestamp)
-                    .font(AppTheme.Fonts.mono)
-                    .foregroundColor(.secondary)
-
-                // Type badge
-                typeBadge
-
-                // Preview content
-                Text(preview)
-                    .font(AppTheme.Fonts.mono)
-                    .foregroundColor(DataDetector.color(for: dataType))
-                    .lineLimit(isExpanded ? nil : 1)
-                    .truncationMode(.tail)
-
-                Spacer(minLength: 0)
-
-                // Copy button (shown on hover)
-                if isHovering {
-                    copyButton
-                }
             }
-            .padding(.vertical, AppTheme.Spacing.sm)
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+
+            // Timestamp
+            Text(timestamp)
+                .font(AppTheme.Fonts.mono)
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+
+            // Type badge
+            typeBadge
+
+            // Preview content
+            Text(preview)
+                .font(AppTheme.Fonts.mono)
+                .foregroundColor(DataDetector.color(for: dataType))
+                .lineLimit(isExpanded ? nil : 1)
+                .truncationMode(.tail)
+                .textSelection(.enabled)
+
+            Spacer(minLength: 0)
+
+            // Copy button (shown on hover)
+            if isHovering {
+                copyButton
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, AppTheme.Spacing.sm)
+        .padding(.horizontal, AppTheme.Spacing.md)
     }
 
     private var typeBadge: some View {
-        HStack(spacing: 2) {
-            Image(systemName: DataDetector.icon(for: dataType))
-                .font(.system(size: 8))
+        Group {
+            switch dataType {
+            case .json:
+                Text("{}")
+                    .font(AppTheme.Fonts.monoBold)
+            case .jsonArray:
+                Text("[]")
+                    .font(AppTheme.Fonts.monoBold)
+            default:
+                Image(systemName: DataDetector.icon(for: dataType))
+                    .font(.system(size: 8))
+            }
         }
         .foregroundColor(.secondary)
         .padding(.horizontal, 4)
