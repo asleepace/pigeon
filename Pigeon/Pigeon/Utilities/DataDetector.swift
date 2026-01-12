@@ -148,7 +148,7 @@ enum DataDetector {
     static func icon(for type: DataType) -> String {
         switch type {
         case .json: return "curlybraces"
-        case .jsonArray: return "brackets"
+        case .jsonArray: return "list.number"
         case .url: return "link"
         case .timestamp: return "clock"
         case .number: return "number"

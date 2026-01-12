@@ -70,6 +70,7 @@ struct TextEventView: View {
             }
         }
         .background(isExpanded ? AppTheme.Colors.expandedBackground : Color.clear)
+        .clipShape(Rectangle())
         .onHover { hovering in
             isHovering = hovering
         }
