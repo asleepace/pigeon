@@ -15,6 +15,7 @@ enum AppTheme {
     enum Fonts {
         static let monoSmall = Font.system(size: 10, design: .monospaced)
         static let mono = Font.system(size: 11, design: .monospaced)
+        static let monoBold = Font.system(size: 11, weight: .semibold, design: .monospaced)
         static let monoMedium = Font.system(size: 12, design: .monospaced)
         static let monoLarge = Font.system(size: 13, design: .monospaced)
     }
