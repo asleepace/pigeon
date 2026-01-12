@@ -114,11 +114,6 @@ struct TextEventView: View {
                 .textSelection(.enabled)
 
             Spacer(minLength: 0)
-
-            // Copy button (shown on hover)
-            if isHovering {
-                copyButton
-            }
         }
         .padding(.vertical, AppTheme.Spacing.sm)
         .padding(.horizontal, AppTheme.Spacing.md)
@@ -164,16 +159,22 @@ struct TextEventView: View {
 
     @ViewBuilder
     private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
-            if let dict = parsedDictionary {
-                JSONTreeView(object: dict)
-            } else if let array = parsedArray {
-                expandedArrayContent(array)
-            } else {
-                codeBlock(event.data ?? "")
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                if let dict = parsedDictionary {
+                    JSONTreeView(object: dict)
+                } else if let array = parsedArray {
+                    expandedArrayContent(array)
+                } else {
+                    codeBlock(event.data ?? "")
+                }
             }
+            .codeBlockStyle()
+
+            // Copy button in top right
+            copyButton
+                .padding(AppTheme.Spacing.sm)
         }
-        .codeBlockStyle()
     }
 
     private func expandedArrayContent(_ array: [Any]) -> some View {
@@ -251,10 +252,6 @@ struct JSONKeyValueRow: View {
         return JSONFormatter.formatPreview(value)
     }
 
-    private var comma: String {
-        isLast ? "" : ","
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 4) {
@@ -284,10 +281,17 @@ struct JSONKeyValueRow: View {
 
                 // Value or preview
                 if !isExpanded || !isExpandable {
-                    Text(valuePreview + comma)
-                        .font(AppTheme.Fonts.mono)
-                        .foregroundColor(JSONFormatter.colorForValue(value))
-                        .textSelection(.enabled)
+                    HStack(spacing: 0) {
+                        Text(valuePreview)
+                            .font(AppTheme.Fonts.mono)
+                            .foregroundColor(JSONFormatter.colorForValue(value))
+                            .textSelection(.enabled)
+                        if !isLast {
+                            Text(",")
+                                .font(AppTheme.Fonts.mono)
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
             }
             .padding(.vertical, 1)
@@ -311,6 +315,13 @@ struct JSONArrayView: View {
     let array: [Any]
     var showBrackets: Bool = true
 
+    // Check if array contains only primitive values of the same type
+    private var isHomogeneous: Bool {
+        guard !array.isEmpty else { return true }
+        let firstType = type(of: array[0])
+        return array.allSatisfy { type(of: $0) == firstType && JSONFormatter.isPrimitive($0) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             if showBrackets {
@@ -321,30 +332,23 @@ struct JSONArrayView: View {
             VStack(alignment: .leading, spacing: 1) {
                 ForEach(Array(array.enumerated()), id: \.offset) { index, item in
                     let isLast = index == array.count - 1
-                    let comma = isLast ? "" : ","
+                    let showComma = isHomogeneous && !isLast
                     if let dict = item as? [String: Any] {
-                        HStack(alignment: .top, spacing: 0) {
-                            JSONTreeView(object: dict, showBrackets: true)
-                            if !isLast {
-                                Text(",")
-                                    .font(AppTheme.Fonts.mono)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                        JSONTreeView(object: dict, showBrackets: true)
                     } else if let arr = item as? [Any] {
-                        HStack(alignment: .top, spacing: 0) {
-                            JSONArrayView(array: arr, showBrackets: true)
-                            if !isLast {
+                        JSONArrayView(array: arr, showBrackets: true)
+                    } else {
+                        HStack(spacing: 0) {
+                            Text(JSONFormatter.formatPreview(item))
+                                .font(AppTheme.Fonts.mono)
+                                .foregroundColor(JSONFormatter.colorForValue(item))
+                                .textSelection(.enabled)
+                            if showComma {
                                 Text(",")
                                     .font(AppTheme.Fonts.mono)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.gray)
                             }
                         }
-                    } else {
-                        Text(JSONFormatter.formatPreview(item) + comma)
-                            .font(AppTheme.Fonts.mono)
-                            .foregroundColor(JSONFormatter.colorForValue(item))
-                            .textSelection(.enabled)
                     }
                 }
             }
