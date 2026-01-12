@@ -18,7 +18,6 @@ struct TextEvent {
         var type: String = "message"
         var data: String?
         chunk.split(separator: "\n").forEach { line in
-            print(line)
             if (line.starts(with: "id: ")) {
                 id = String(line.dropFirst(4))
             }
@@ -66,7 +65,7 @@ class TextEventStream: NSObject, URLSessionDataDelegate {
     private var lastEventId: String?
     private var session: URLSession?
     private var task: URLSessionTask?
-    private var delegate: TextEventStreamDelegate?
+    private weak var delegate: TextEventStreamDelegate?
     
     var timeout: TimeInterval = .infinity
     var headers: [String: String] = [:]
@@ -107,7 +106,7 @@ class TextEventStream: NSObject, URLSessionDataDelegate {
             request.setValue(self.lastEventId, forHTTPHeaderField: "Last-Event-ID")
         }
         for (key, value) in self.headers {
-            request.setValue(key, forHTTPHeaderField: value)
+            request.setValue(value, forHTTPHeaderField: key)
         }
         request.timeoutInterval = self.timeout
         self.task = self.session?.dataTask(with: request)
@@ -132,12 +131,10 @@ class TextEventStream: NSObject, URLSessionDataDelegate {
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        print("[TextEventStream] didCompleteWithError: \(error?.localizedDescription ?? "nil")")
         self.delegate?.textEventStreamDidError(error: error ?? Errors.unknownNetworkError)
     }
-    
+
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: (any Error)?) {
-        print("[TextEventStream] didBecomeInvalidWithError: \(error?.localizedDescription ?? "nil")")
         self.delegate?.textEventStreamDidError(error: error ?? Errors.unknownNetworkError)
         self.task = nil
     }

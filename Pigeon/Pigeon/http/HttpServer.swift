@@ -66,7 +66,7 @@ struct HttpResponse {
         lines.append("")
         lines.append(body ?? "")
         
-        return lines.joined(separator: "\r\n").data(using: .utf8)!
+        return lines.joined(separator: "\r\n").data(using: .utf8) ?? Data()
     }
     
     private var statusText: String {
@@ -208,7 +208,7 @@ class HttpServer {
             self.receiveRequest(connection: connection)  // Use new method
         }
         self.listener?.start(queue: queue)
-        self.url = URL(string: "http://localhost:\(port)")!
+        self.url = URL(string: "http://localhost:\(port)")
     }
     
     func disconnect() {

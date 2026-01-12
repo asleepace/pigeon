@@ -41,8 +41,8 @@ struct SidebarView: View {
             addStreamSheet
         }
         .onChange(of: selectedStream) { _, newStream in
-            if let stream = newStream {
-                streamManager.connect(to: URL(string: stream.url)!)
+            if let stream = newStream, let url = URL(string: stream.url) {
+                streamManager.connect(to: url)
             }
         }
         .onAppear {
@@ -102,15 +102,20 @@ struct SidebarView: View {
     }
 }
 
-// MARK: SidebarView.swift
+// MARK: StreamRow
 struct StreamRow: View {
     let stream: StreamConnection
     @EnvironmentObject var streamManager: StreamManager
-    
+
+    private var isThisStreamConnected: Bool {
+        guard streamManager.isConnected else { return false }
+        return streamManager.url?.absoluteString == stream.url
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(streamManager.isConnected ? Color.green : Color.gray.opacity(0.5))
+                .fill(isThisStreamConnected ? Color.green : Color.gray.opacity(0.5))
                 .frame(width: 7, height: 7)
                 .padding(.leading, 3)
             Text(stream.name)

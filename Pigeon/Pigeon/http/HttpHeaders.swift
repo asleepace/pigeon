@@ -61,7 +61,7 @@ struct HttpHeaders {
     }
     
     func toData() -> Data {
-        toString().data(using: .utf8)!
+        toString().data(using: .utf8) ?? Data()
     }
     
     // MARK: - Status Text

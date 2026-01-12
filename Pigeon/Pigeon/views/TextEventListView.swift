@@ -56,18 +56,16 @@ struct TextEventListLoadingView: View {
     
     func sendTestEvent() async {
         do {
-            print("[test] sending test event: \(streamUrl)")
-            let response = try await fetch(
+            _ = try await fetch(
                   streamUrl,
                   method: .POST,
                   headers: [
                     "Content-Type": "text/plain",
                   ],
-                  body: "Hello, world!".data(using: .utf8),
+                  body: "Hello, world!".data(using: .utf8)
             )
-            response.debugPrint()
         } catch {
-            print("[ERROR] \(error)")
+            // Test event failed to send
         }
     }
     
@@ -156,8 +154,8 @@ struct TextEventListView: View {
             Button {
                 if streamManager.isConnected {
                     streamManager.disconnect()
-                } else {
-                    streamManager.connect(to: URL(string: stream.url)!)
+                } else if let url = URL(string: stream.url) {
+                    streamManager.connect(to: url)
                 }
             } label: {
                 Image(systemName: streamManager.isConnected ? "pause.fill" : "play.fill")

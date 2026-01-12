@@ -85,8 +85,6 @@ struct TextEventView: View {
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                 
-                // badgeView
-                
                 Text(preview)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.primary)
@@ -101,17 +99,7 @@ struct TextEventView: View {
         }
         .buttonStyle(.plain)
     }
-    
-//    private var badgeView: some View {
-//        Text(event.type ?? "message")
-//            .font(.system(size: 9, weight: .medium, design: .monospaced))
-//            .padding(.horizontal, 5)
-//            .padding(.vertical, 2)
-//            .background(badgeColor)
-//            .foregroundColor(badgeTextColor)
-//            .cornerRadius(3)
-//    }
-    
+
     // MARK: - Expanded Content
     
     @ViewBuilder
@@ -127,14 +115,6 @@ struct TextEventView: View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(array.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .top, spacing: 6) {
-                    
-//                    if depth > 0 {
-//                        Text("\(index)")
-//                            .font(.system(size: 10, design: .monospaced))
-//                            .foregroundColor(.secondary)
-//                            .frame(width: 14, alignment: .trailing)
-//                    }
-                    
                     if isPrimitive(item) {
                         Text(formatPreview(item))
                             .font(.system(size: 11, design: .monospaced))
@@ -232,23 +212,7 @@ struct TextEventView: View {
         default: return .primary
         }
     }
-    
-    private var badgeColor: Color {
-        switch event.type?.lowercased() {
-        case "system": return .orange
-        case "error": return .red
-        case "warn", "warning": return .yellow
-        default: return Color(nsColor: .darkGray)
-        }
-    }
-    
-    private var badgeTextColor: Color {
-        switch event.type?.lowercased() {
-        case "warn", "warning": return .black
-        default: return .white
-        }
-    }
-    
+
     private func formatJSON(_ string: String) -> String {
         guard let data = string.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),

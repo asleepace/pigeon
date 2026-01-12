@@ -65,21 +65,27 @@ extension URL {
 // to a local url such as http://localhost:8787 and have the body broadcasted to
 // the relevant stream.
 class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
-    
+
     @Published var url: URL?
     @Published var events: [TextEvent] = []
     @Published var isConnected: Bool = false
-    
+    @Published var connectionError: String?
+
     private var stream: TextEventStream?
     private var httpServer: HttpServer?
-    
+
     func connect(to url: URL) {
         self.url = url
+        self.connectionError = nil
         self.stream?.disconnect()
         self.events = []
         if url.isLocalHost {
             self.httpServer = HttpServer(port: 8787, delegate: self)
-            try? self.httpServer?.connect()
+            do {
+                try self.httpServer?.connect()
+            } catch {
+                self.connectionError = "Failed to start local server: \(error.localizedDescription)"
+            }
         }
         self.stream = TextEventStream(url, delegate: self)
         self.stream?.connect()
@@ -92,19 +98,17 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     // MARK: - HttpDelegate
-    
+
     func httpServer(_ server: HttpServer, didConnect sseClient: Response) {
-        print("[app] SSEClient connected: \(sseClient)")
         sseClient.startEventStream()
         sseClient.sendEvent("{\"status\" : \"connected\"}")
     }
-    
+
     func httpServer(_ server: HttpServer, didDisconnect sseClient: Response) {
-        print("[app] SSEClient disconnected: \(sseClient)")
+        // Client disconnected
     }
-    
+
     func httpServer(_ server: HttpServer, didReceiveRequest request: HttpRequest) -> HttpResponse {
-        print("[app] didReceiveRequest: \(request.method) \(request.path) \(request.headers)")
         switch request.method {
         case "OPTIONS":
             return HttpResponse(status: 200).withCORS()
@@ -117,12 +121,8 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     func handleIncomingRequest(_ request: HttpRequest) {
-        guard let body = request.body, !body.isEmpty else {
-            print("[app] incoming request missing body...")
-            return
-        }
+        guard let body = request.body, !body.isEmpty else { return }
         let textEvent = TextEvent("data: \(body)")
-        textEvent.debug()
         self.events.append(textEvent)
     }
     
@@ -134,7 +134,7 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     }
     
     func textEventStreamDidError(error: Error) {
-        print("[textEventStreamDidError] error: \(error.localizedDescription)")
+        self.connectionError = error.localizedDescription
         self.isConnected = false
     }
 }
