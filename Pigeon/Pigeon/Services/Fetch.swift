@@ -79,26 +79,9 @@ struct FetchResponse {
 @discardableResult func fetch(_ href: String, headers: FetchHeaders = [
     "Content-Type": "application/json",
     "Accept": "application/json",
-],) async throws -> FetchResponse {
+]) async throws -> FetchResponse {
     try await fetch(href, method: .GET, headers: headers)
 }
-
-//@discardableResult func fetch(_ href: String, body: Data, headers: FetchHeaders = [
-//    "Content-Type": "application/json",
-//    "Accept": "application/json",
-//]) async throws -> FetchResponse {
-//    try await fetch(href, method: .POST, body: body)
-//}
-//
-//@discardableResult func fetch<T: Encodable>(_ href: String, body: T, headers: FetchHeaders = [
-//    "Content-Type": "application/json",
-//    "Accept": "application/json",
-//]) async throws -> FetchResponse {
-//    guard let data = try? JSONEncoder().encode(body) else {
-//        throw FetchError.invalidJSON
-//    }
-//    return try await fetch(href, method: .POST, body: data)
-//}
 
 // MARK: Implementation
 
@@ -118,47 +101,9 @@ struct FetchResponse {
         request.setValue(value, forHTTPHeaderField: key)
     }
     if let body = body {
-        print("[fetch] setting body: \(body)")
         request.httpBody = body
-        
-        let contentLength = "\(body.count)"
-        request.setValue(contentLength, forHTTPHeaderField: "Content-Length")
+        request.setValue("\(body.count)", forHTTPHeaderField: "Content-Length")
     }
     let output = try await URLSession.shared.data(for: request)
     return try FetchResponse(output)
-
 }
-
-//@discardableResult func fetch<T: Encodable>(
-//    _ href: String,
-//    method: FetchMethod,
-//    headers: FetchHeaders = [
-//        "Content-Type": "application/json",
-//        "Accept": "application/json",
-//    ],
-//    body: T
-//) async throws -> FetchResponse {
-//    let data = try JSONEncoder().encode(body)
-//    return try await fetch(href, method: method, headers: headers, body: data)
-//}
-
-
-//func fetch<T: Encodable>(
-//    _ href: String,
-//    method: FetchMethod,
-//    headers: [String: String] = [
-//        "Content-Type": "application/json",
-//        "Accept": "application/json",
-//    ],
-//    body: T,
-//    _ completion: @escaping (Result<FetchResponse, any Error>) -> Void
-//) {
-//    Task {
-//        do {
-//            let response = try await fetch(href, method: method, headers: headers, body: body)
-//            await MainActor.run { completion(.success(response)) }
-//        } catch {
-//            await MainActor.run { completion(.failure(error)) }
-//        }
-//    }
-//}

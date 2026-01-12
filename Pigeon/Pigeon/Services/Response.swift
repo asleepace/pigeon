@@ -41,14 +41,12 @@ class Response {
                 break
             }
         }
-        
-        // connection.start(queue: .main)
     }
 
     func toData() -> Data {
         let hdrs = headers.toString()
-        guard let body = self.body else { return (hdrs + "\r\n").data(using: .utf8)! }
-        return [hdrs, "", body].joined(separator: "\r\n").data(using: .utf8)!
+        guard let body = self.body else { return (hdrs + "\r\n").data(using: .utf8) ?? Data() }
+        return [hdrs, "", body].joined(separator: "\r\n").data(using: .utf8) ?? Data()
     }
     
     // MARK: - SSE Methods
@@ -57,7 +55,7 @@ class Response {
         guard !isClosed else { return }
         headers.set("Content-Type", "text/event-stream")
         headers.set("Connection", "keep-alive")
-        let headerData = (headers.toString() + "\r\n").data(using: .utf8)!
+        guard let headerData = (headers.toString() + "\r\n").data(using: .utf8) else { return }
         connection.send(content: headerData, completion: .contentProcessed { _ in })
     }
     
