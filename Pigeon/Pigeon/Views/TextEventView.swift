@@ -90,7 +90,8 @@ struct TextEventView: View {
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.secondary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .frame(width: 10)
+                    .frame(width: 20, height: 20)
+                    .contentShape(Rectangle())
                     .opacity(hasComplexContent ? 1 : 0.3)
             }
             .buttonStyle(.plain)
@@ -264,11 +265,12 @@ struct JSONKeyValueRow: View {
                             .font(.system(size: 8, weight: .bold))
                             .foregroundColor(.secondary)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                            .frame(width: 10)
+                            .frame(width: 16, height: 16)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Spacer().frame(width: 10)
+                    Spacer().frame(width: 16)
                 }
 
                 // Key
