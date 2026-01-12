@@ -4,228 +4,318 @@
 //
 //  Created by Colin Teahan on 1/10/26.
 //
+
 import SwiftUI
 
 struct TextEventView: View {
     let event: TextEvent
     @State private var isExpanded: Bool = false
-    
+    @State private var isHovering: Bool = false
+
+    // MARK: - Computed Properties
+
     private var timestamp: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
+        formatter.dateFormat = "HH:mm:ss.SSS"
         return formatter.string(from: event.timestamp)
     }
-    
+
+    private var dataType: DataType {
+        DataDetector.detect(event.data)
+    }
+
     private var isSystemEvent: Bool {
         event.type == "system"
     }
-    
+
     private var parsedArray: [Any]? {
-        guard let data = event.data?.data(using: .utf8) else { return nil }
-        return try? JSONSerialization.jsonObject(with: data) as? [Any]
+        JSONFormatter.parseArray(event.data)
     }
-    
+
+    private var parsedDictionary: [String: Any]? {
+        JSONFormatter.parseDictionary(event.data)
+    }
+
     private var hasComplexContent: Bool {
-        if isSystemEvent { return true }
+        if isSystemEvent || dataType == .json || dataType == .jsonArray { return true }
         guard let array = parsedArray else { return false }
-        return array.contains { !isPrimitive($0) }
+        return array.contains { !JSONFormatter.isPrimitive($0) }
     }
-    
-    private func isPrimitive(_ value: Any) -> Bool {
-        switch value {
-        case is String, is NSNumber, is NSNull:
-            return true
-        default:
-            return false
-        }
-    }
-    
+
     private var preview: String {
-        if isSystemEvent {
-            return event.data ?? "—-"
+        if isSystemEvent || dataType == .json {
+            if let dict = parsedDictionary {
+                return JSONFormatter.formatPreview(dict, maxLength: 80)
+            }
+            return event.data ?? "—"
         }
         guard let array = parsedArray else {
-            return event.data ?? "—-"
+            return event.data ?? "—"
         }
-        return array.map { formatPreview($0) }.joined(separator: " ")
+        return array.map { JSONFormatter.formatPreview($0) }.joined(separator: " ")
     }
-    
+
+    // MARK: - Body
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow
-            
+
             if isExpanded && hasComplexContent {
                 expandedContent
                     .padding(.leading, 32)
-                    .padding(.trailing, 12)
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
+                    .padding(.trailing, AppTheme.Spacing.lg)
+                    .padding(.top, AppTheme.Spacing.xs)
+                    .padding(.bottom, AppTheme.Spacing.md)
             }
         }
-        .background(isExpanded ? Color.gray.opacity(0.08) : Color.clear)
+        .background(isExpanded ? AppTheme.Colors.expandedBackground : Color.clear)
+        .onHover { hovering in
+            isHovering = hovering
+        }
     }
-    
+
     // MARK: - Header Row
-    
+
     private var headerRow: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.15)) {
                 isExpanded.toggle()
             }
         } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: AppTheme.Spacing.md) {
+                // Expand chevron
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.secondary)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .frame(width: 10)
                     .opacity(hasComplexContent ? 1 : 0.3)
-                
+
+                // Timestamp
                 Text(timestamp)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(AppTheme.Fonts.mono)
                     .foregroundColor(.secondary)
-                
+
+                // Type badge
+                typeBadge
+
+                // Preview content
                 Text(preview)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.primary)
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(DataDetector.color(for: dataType))
                     .lineLimit(isExpanded ? nil : 1)
                     .truncationMode(.tail)
-                
+
                 Spacer(minLength: 0)
+
+                // Copy button (shown on hover)
+                if isHovering {
+                    copyButton
+                }
             }
-            .padding(.vertical, 5)
-            .padding(.horizontal, 10)
+            .padding(.vertical, AppTheme.Spacing.sm)
+            .padding(.horizontal, AppTheme.Spacing.md)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
+    private var typeBadge: some View {
+        HStack(spacing: 2) {
+            Image(systemName: DataDetector.icon(for: dataType))
+                .font(.system(size: 8))
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(Color.secondary.opacity(0.15))
+        .cornerRadius(3)
+    }
+
+    private var copyButton: some View {
+        Button {
+            if let data = event.data {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(data, forType: .string)
+            }
+        } label: {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Copy to clipboard")
+    }
+
     // MARK: - Expanded Content
-    
+
     @ViewBuilder
     private var expandedContent: some View {
-        if isSystemEvent {
-            codeBlock(formatJSON(event.data ?? ""))
-        } else if let array = parsedArray {
-            expandedArrayContent(array)
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+            if let dict = parsedDictionary {
+                JSONTreeView(object: dict)
+            } else if let array = parsedArray {
+                expandedArrayContent(array)
+            } else {
+                codeBlock(event.data ?? "")
+            }
         }
+        .codeBlockStyle()
     }
-    
+
     private func expandedArrayContent(_ array: [Any]) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.xxs) {
             ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                HStack(alignment: .top, spacing: 6) {
-                    if isPrimitive(item) {
-                        Text(formatPreview(item))
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(colorForPrimitive(item))
+                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
+                    Text("\(index)")
+                        .font(AppTheme.Fonts.monoSmall)
+                        .foregroundColor(.secondary)
+                        .frame(width: 20, alignment: .trailing)
+
+                    if JSONFormatter.isPrimitive(item) {
+                        Text(JSONFormatter.formatPreview(item))
+                            .font(AppTheme.Fonts.mono)
+                            .foregroundColor(JSONFormatter.colorForValue(item))
                             .textSelection(.enabled)
                     } else {
-                        Text(formatJSON(item))
-                            .font(.system(size: 11, design: .monospaced))
+                        Text(JSONFormatter.format(item))
+                            .font(AppTheme.Fonts.mono)
                             .foregroundColor(.primary)
                             .textSelection(.enabled)
                     }
                 }
-                .focusable(true, interactions: .automatic)
             }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.2))
-        .cornerRadius(4)
-    }
-    
-    private func codeBlock(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, design: .monospaced))
-            .textSelection(.enabled)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.black.opacity(0.2))
-            .cornerRadius(4)
-    }
-    
-    // MARK: - Formatting
-    
-    private func formatPreview(_ value: Any) -> String {
-        switch value {
-        case let string as String:
-            return string
-        case let number as NSNumber:
-            if CFGetTypeID(number) == CFBooleanGetTypeID() {
-                return number.boolValue ? "true" : "false"
-            }
-            return number.stringValue
-        case is NSNull:
-            return "null"
-        case let dict as [String: Any]:
-            return formatInline(dict, maxLength: 50)
-        case let array as [Any]:
-            return formatInline(array, maxLength: 50)
-        default:
-            return String(describing: value)
-        }
-    }
-    
-    private func formatInline(_ dict: [String: Any], maxLength: Int) -> String {
-        let pairs = dict.map { "\($0.key): \(formatInlineValue($0.value))" }
-        let full = "{ " + pairs.joined(separator: ", ") + " }"
-        if full.count <= maxLength { return full }
-        return String(full.prefix(maxLength - 1)) + "…"
-    }
-    
-    private func formatInline(_ array: [Any], maxLength: Int) -> String {
-        let items = array.map { formatInlineValue($0) }
-        let full = "[" + items.joined(separator: ", ") + "]"
-        if full.count <= maxLength { return full }
-        return String(full.prefix(maxLength - 1)) + "…"
-    }
-    
-    private func formatInlineValue(_ value: Any) -> String {
-        switch value {
-        case let string as String:
-            return "\"\(string)\""
-        case let number as NSNumber:
-            if CFGetTypeID(number) == CFBooleanGetTypeID() {
-                return number.boolValue ? "true" : "false"
-            }
-            return number.stringValue
-        case is NSNull:
-            return "null"
-        case let dict as [String: Any]:
-            return "{ \(dict.count) }"
-        case let array as [Any]:
-            return "[\(array.count)]"
-        default:
-            return String(describing: value)
-        }
-    }
-    
-    private func colorForPrimitive(_ value: Any) -> Color {
-        switch value {
-        case is String: return .green
-        case is NSNumber: return .cyan
-        case is NSNull: return .secondary
-        default: return .primary
         }
     }
 
-    private func formatJSON(_ string: String) -> String {
-        guard let data = string.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data),
-              let pretty = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
-              let formatted = String(data: pretty, encoding: .utf8)
-        else { return string }
-        return formatted
+    private func codeBlock(_ text: String) -> some View {
+        Text(JSONFormatter.format(text))
+            .font(AppTheme.Fonts.mono)
+            .textSelection(.enabled)
     }
-    
-    private func formatJSON(_ object: Any) -> String {
-        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]),
-              let string = String(data: data, encoding: .utf8)
-        else { return String(describing: object) }
-        return string
+}
+
+// MARK: - JSON Tree View (Chrome DevTools-like)
+
+struct JSONTreeView: View {
+    let object: [String: Any]
+    @State private var expandedKeys: Set<String> = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(object.keys.sorted(), id: \.self) { key in
+                JSONKeyValueRow(
+                    key: key,
+                    value: object[key]!,
+                    isExpanded: expandedKeys.contains(key),
+                    onToggle: { toggleKey(key) }
+                )
+            }
+        }
+    }
+
+    private func toggleKey(_ key: String) {
+        if expandedKeys.contains(key) {
+            expandedKeys.remove(key)
+        } else {
+            expandedKeys.insert(key)
+        }
+    }
+}
+
+struct JSONKeyValueRow: View {
+    let key: String
+    let value: Any
+    let isExpanded: Bool
+    let onToggle: () -> Void
+
+    private var isExpandable: Bool {
+        value is [String: Any] || value is [Any]
+    }
+
+    private var valuePreview: String {
+        if let dict = value as? [String: Any] {
+            return "{\(dict.count)}"
+        } else if let array = value as? [Any] {
+            return "[\(array.count)]"
+        }
+        return JSONFormatter.formatPreview(value)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 4) {
+                // Expand chevron
+                if isExpandable {
+                    Button(action: onToggle) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .frame(width: 10)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Spacer().frame(width: 10)
+                }
+
+                // Key
+                Text(key)
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(AppTheme.Colors.key)
+
+                Text(":")
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(.secondary)
+
+                // Value or preview
+                if !isExpanded || !isExpandable {
+                    Text(valuePreview)
+                        .font(AppTheme.Fonts.mono)
+                        .foregroundColor(JSONFormatter.colorForValue(value))
+                        .textSelection(.enabled)
+                }
+            }
+            .padding(.vertical, 1)
+
+            // Expanded nested content
+            if isExpanded && isExpandable {
+                Group {
+                    if let dict = value as? [String: Any] {
+                        JSONTreeView(object: dict)
+                    } else if let array = value as? [Any] {
+                        JSONArrayView(array: array)
+                    }
+                }
+                .padding(.leading, 16)
+            }
+        }
+    }
+}
+
+struct JSONArrayView: View {
+    let array: [Any]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(array.enumerated()), id: \.offset) { index, item in
+                HStack(spacing: 4) {
+                    Text("\(index)")
+                        .font(AppTheme.Fonts.monoSmall)
+                        .foregroundColor(.secondary)
+                        .frame(width: 20, alignment: .trailing)
+
+                    if let dict = item as? [String: Any] {
+                        JSONTreeView(object: dict)
+                    } else {
+                        Text(JSONFormatter.formatPreview(item))
+                            .font(AppTheme.Fonts.mono)
+                            .foregroundColor(JSONFormatter.colorForValue(item))
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+        }
     }
 }

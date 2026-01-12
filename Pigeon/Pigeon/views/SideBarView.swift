@@ -1,34 +1,22 @@
 //
-//  SideBarView.swift
+//  SidebarView.swift
 //  Pigeon
 //
 //  Created by Colin Teahan on 1/10/26.
 //
-//  Displays left-hand side bar with list of active connections.
-//  The default initial connection should be the localhost
-//  server in this application.
+//  Displays left-hand sidebar with list of stream connections.
 //
 
 import SwiftUI
 
-struct StreamConnection: Identifiable, Hashable {
-    let id = UUID()
-    var name: String
-    var url: String
-    var isConnected: Bool = false
-}
-
 struct SidebarView: View {
     @EnvironmentObject var streamManager: StreamManager
     @Binding var selectedStream: StreamConnection?
-    @State private var streams: [StreamConnection] = [
-        StreamConnection(name: "Localhost", url: "http://localhost:8787/"), // NOTE: HTTP only!
-        StreamConnection(name: "Console Dump", url: "https://consoledump.io/api/sse?id=31b2fe")
-    ]
+    @State private var streams: [StreamConnection] = StreamStorage.load()
     @State private var isAddingStream = false
     @State private var newStreamName = ""
     @State private var newStreamURL = ""
-    
+
     var body: some View {
         List(selection: $selectedStream) {
             streamsList
@@ -45,14 +33,17 @@ struct SidebarView: View {
                 streamManager.connect(to: url)
             }
         }
+        .onChange(of: streams) { _, newStreams in
+            StreamStorage.save(newStreams)
+        }
         .onAppear {
-            guard self.selectedStream == nil else { return }
-            self.selectedStream = streams.first
+            guard selectedStream == nil else { return }
+            selectedStream = streams.first
         }
     }
-    
+
     // MARK: - Subviews
-    
+
     private var streamsList: some View {
         Section("Streams") {
             ForEach(streams) { stream in
@@ -66,7 +57,7 @@ struct SidebarView: View {
             }
         }
     }
-    
+
     private var bottomBar: some View {
         VStack(spacing: 0) {
             Divider()
@@ -83,7 +74,7 @@ struct SidebarView: View {
         }
         .background(.ultraThinMaterial)
     }
-    
+
     private var addStreamSheet: some View {
         AddStreamSheet(
             name: $newStreamName,
@@ -99,64 +90,5 @@ struct SidebarView: View {
                 isAddingStream = false
             }
         )
-    }
-}
-
-// MARK: StreamRow
-struct StreamRow: View {
-    let stream: StreamConnection
-    @EnvironmentObject var streamManager: StreamManager
-
-    private var isThisStreamConnected: Bool {
-        guard streamManager.isConnected else { return false }
-        return streamManager.url?.absoluteString == stream.url
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(isThisStreamConnected ? Color.green : Color.gray.opacity(0.5))
-                .frame(width: 7, height: 7)
-                .padding(.leading, 3)
-            Text(stream.name)
-                .lineLimit(1)
-                .padding(.leading, 2)
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct AddStreamSheet: View {
-    @Binding var name: String
-    @Binding var url: String
-    var onAdd: () -> Void
-    var onCancel: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Add Stream")
-                .font(.headline)
-            
-            TextField("Name", text: $name)
-                .textFieldStyle(.roundedBorder)
-            
-            TextField("URL", text: $url)
-                .textFieldStyle(.roundedBorder)
-            
-            buttonRow
-        }
-        .padding()
-        .frame(width: 300)
-    }
-    
-    private var buttonRow: some View {
-        HStack {
-            Button("Cancel", action: onCancel)
-                .keyboardShortcut(.cancelAction)
-            Spacer()
-            Button("Add", action: onAdd)
-                .keyboardShortcut(.defaultAction)
-                .disabled(name.isEmpty || url.isEmpty)
-        }
     }
 }
