@@ -176,23 +176,7 @@ struct TextEventView: View {
     }
 
     private func expandedArrayContent(_ array: [Any]) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.xxs) {
-            ForEach(Array(array.enumerated()), id: \.offset) { _, item in
-                if JSONFormatter.isPrimitive(item) {
-                    Text(JSONFormatter.formatPreview(item))
-                        .font(AppTheme.Fonts.mono)
-                        .foregroundColor(JSONFormatter.colorForValue(item))
-                        .textSelection(.enabled)
-                } else if let dict = item as? [String: Any] {
-                    JSONTreeView(object: dict)
-                } else {
-                    Text(JSONFormatter.format(item))
-                        .font(AppTheme.Fonts.mono)
-                        .foregroundColor(.primary)
-                        .textSelection(.enabled)
-                }
-            }
-        }
+        JSONArrayView(array: array, showBrackets: true)
     }
 
     private func codeBlock(_ text: String) -> some View {
@@ -206,17 +190,31 @@ struct TextEventView: View {
 
 struct JSONTreeView: View {
     let object: [String: Any]
+    var showBrackets: Bool = true
     @State private var expandedKeys: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            ForEach(object.keys.sorted(), id: \.self) { key in
-                JSONKeyValueRow(
-                    key: key,
-                    value: object[key]!,
-                    isExpanded: expandedKeys.contains(key),
-                    onToggle: { toggleKey(key) }
-                )
+            if showBrackets {
+                Text("{")
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(object.keys.sorted(), id: \.self) { key in
+                    JSONKeyValueRow(
+                        key: key,
+                        value: object[key]!,
+                        isExpanded: expandedKeys.contains(key),
+                        onToggle: { toggleKey(key) }
+                    )
+                }
+            }
+            .padding(.leading, showBrackets ? 12 : 0)
+            if showBrackets {
+                Text("}")
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -302,25 +300,41 @@ struct JSONKeyValueRow: View {
 
 struct JSONArrayView: View {
     let array: [Any]
+    var showBrackets: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                HStack(spacing: 4) {
-                    Text("\(index)")
-                        .font(AppTheme.Fonts.monoSmall)
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+            if showBrackets {
+                Text("[")
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(array.enumerated()), id: \.offset) { index, item in
+                    HStack(spacing: 4) {
+                        Text("\(index)")
+                            .font(AppTheme.Fonts.monoSmall)
+                            .foregroundColor(.secondary)
+                            .frame(width: 20, alignment: .trailing)
 
-                    if let dict = item as? [String: Any] {
-                        JSONTreeView(object: dict)
-                    } else {
-                        Text(JSONFormatter.formatPreview(item))
-                            .font(AppTheme.Fonts.mono)
-                            .foregroundColor(JSONFormatter.colorForValue(item))
-                            .textSelection(.enabled)
+                        if let dict = item as? [String: Any] {
+                            JSONTreeView(object: dict, showBrackets: true)
+                        } else if let arr = item as? [Any] {
+                            JSONArrayView(array: arr, showBrackets: true)
+                        } else {
+                            Text(JSONFormatter.formatPreview(item))
+                                .font(AppTheme.Fonts.mono)
+                                .foregroundColor(JSONFormatter.colorForValue(item))
+                                .textSelection(.enabled)
+                        }
                     }
                 }
+            }
+            .padding(.leading, showBrackets ? 12 : 0)
+            if showBrackets {
+                Text("]")
+                    .font(AppTheme.Fonts.mono)
+                    .foregroundColor(.secondary)
             }
         }
     }
