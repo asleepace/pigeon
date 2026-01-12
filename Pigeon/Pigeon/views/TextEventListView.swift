@@ -93,40 +93,62 @@ struct EmptyStateView: View {
     }
 }
 
-// MARK: - Search Filter Bar
+// MARK: - Unified Toolbar
 
-struct SearchFilterBar: View {
+struct UnifiedToolbar: View {
+    let stream: StreamConnection
     @Binding var searchQuery: String
     @Binding var filterType: String?
     var eventCount: Int
+    var connectionState: ConnectionState
+    var isConnected: Bool
+    var onClear: () -> Void
+    var onToggleConnection: () -> Void
 
     private let filterOptions = ["All", "message", "system", "error"]
 
     var body: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            // Search field
-            HStack {
-                Image(systemName: "magnifyingglass")
+        HStack(spacing: AppTheme.Spacing.sm) {
+            // Connection status
+            Circle()
+                .fill(statusColor)
+                .frame(width: 8, height: 8)
+
+            if case .reconnecting(let attempt) = connectionState {
+                Text("(\(attempt))")
+                    .font(AppTheme.Fonts.monoSmall)
                     .foregroundColor(.secondary)
-                TextField("Search events...", text: $searchQuery)
+            }
+
+            Divider()
+                .frame(height: 16)
+
+            // Search field
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                TextField("Filter", text: $searchQuery)
                     .textFieldStyle(.plain)
+                    .frame(minWidth: 60, maxWidth: 120)
                 if !searchQuery.isEmpty {
                     Button {
                         searchQuery = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, AppTheme.Spacing.md)
-            .padding(.vertical, AppTheme.Spacing.sm)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
             .background(Color.secondary.opacity(0.1))
-            .cornerRadius(AppTheme.CornerRadius.small)
+            .cornerRadius(4)
 
-            // Filter dropdown
-            Picker("Filter", selection: Binding(
+            // Type filter
+            Picker("", selection: Binding(
                 get: { filterType ?? "All" },
                 set: { filterType = $0 == "All" ? nil : $0 }
             )) {
@@ -135,42 +157,41 @@ struct SearchFilterBar: View {
                 }
             }
             .pickerStyle(.menu)
-            .frame(width: 100)
+            .frame(width: 80)
+            .labelsHidden()
 
             Spacer()
 
             // Event count
-            Text("\(eventCount) events")
+            Text("\(eventCount)")
                 .font(AppTheme.Fonts.monoSmall)
                 .foregroundColor(.secondary)
-        }
-        .padding(.horizontal, AppTheme.Spacing.lg)
-        .padding(.vertical, AppTheme.Spacing.md)
-        .background(.bar)
-    }
-}
 
-// MARK: - Connection Status View
+            Divider()
+                .frame(height: 16)
 
-struct ConnectionStatusView: View {
-    let state: ConnectionState
-
-    var body: some View {
-        HStack(spacing: AppTheme.Spacing.xs) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-
-            if case .reconnecting(let attempt) = state {
-                Text("Reconnecting (\(attempt))...")
-                    .font(AppTheme.Fonts.monoSmall)
-                    .foregroundColor(.secondary)
+            // Action buttons
+            Button(action: onClear) {
+                Image(systemName: "trash")
+                    .font(.system(size: 11))
             }
+            .buttonStyle(.plain)
+            .help("Clear events")
+
+            Button(action: onToggleConnection) {
+                Image(systemName: isConnected ? "pause.fill" : "play.fill")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .help(isConnected ? "Disconnect" : "Connect")
         }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.vertical, 6)
+        .background(.bar)
     }
 
     private var statusColor: Color {
-        switch state {
+        switch connectionState {
         case .connected: return AppTheme.Colors.connected
         case .connecting: return AppTheme.Colors.connecting
         case .reconnecting: return AppTheme.Colors.reconnecting
@@ -198,11 +219,22 @@ struct TextEventListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search/filter bar
-            SearchFilterBar(
+            // Unified toolbar
+            UnifiedToolbar(
+                stream: stream,
                 searchQuery: $streamManager.searchQuery,
                 filterType: $streamManager.filterType,
-                eventCount: messages.count
+                eventCount: messages.count,
+                connectionState: streamManager.connectionState,
+                isConnected: streamManager.isConnected,
+                onClear: { streamManager.clearEvents(for: stream.url) },
+                onToggleConnection: {
+                    if streamManager.isConnected {
+                        streamManager.disconnect()
+                    } else if let url = URL(string: stream.url) {
+                        streamManager.connect(to: url)
+                    }
+                }
             )
 
             Divider()
@@ -212,7 +244,6 @@ struct TextEventListView: View {
                 if messages.isEmpty {
                     EmptyStateView(streamName: stream.name, streamUrl: stream.url)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.bottom, 44.0)
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
@@ -237,35 +268,5 @@ struct TextEventListView: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .navigationTitle(stream.name)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                toolbarContent
-            }
-        }
-    }
-
-    private var toolbarContent: some View {
-        HStack(spacing: AppTheme.Spacing.md) {
-            ConnectionStatusView(state: streamManager.connectionState)
-
-            Button {
-                streamManager.clearEvents(for: stream.url)
-            } label: {
-                Image(systemName: "trash")
-            }
-            .help("Clear events")
-
-            Button {
-                if streamManager.isConnected {
-                    streamManager.disconnect()
-                } else if let url = URL(string: stream.url) {
-                    streamManager.connect(to: url)
-                }
-            } label: {
-                Image(systemName: streamManager.isConnected ? "pause.fill" : "play.fill")
-            }
-            .help(streamManager.isConnected ? "Disconnect" : "Connect")
-        }
-        .padding(.horizontal, AppTheme.Spacing.sm)
     }
 }

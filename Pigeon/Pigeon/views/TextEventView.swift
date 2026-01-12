@@ -167,24 +167,19 @@ struct TextEventView: View {
 
     private func expandedArrayContent(_ array: [Any]) -> some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.xxs) {
-            ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
-                    Text("\(index)")
-                        .font(AppTheme.Fonts.monoSmall)
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
-
-                    if JSONFormatter.isPrimitive(item) {
-                        Text(JSONFormatter.formatPreview(item))
-                            .font(AppTheme.Fonts.mono)
-                            .foregroundColor(JSONFormatter.colorForValue(item))
-                            .textSelection(.enabled)
-                    } else {
-                        Text(JSONFormatter.format(item))
-                            .font(AppTheme.Fonts.mono)
-                            .foregroundColor(.primary)
-                            .textSelection(.enabled)
-                    }
+            ForEach(Array(array.enumerated()), id: \.offset) { _, item in
+                if JSONFormatter.isPrimitive(item) {
+                    Text(JSONFormatter.formatPreview(item))
+                        .font(AppTheme.Fonts.mono)
+                        .foregroundColor(JSONFormatter.colorForValue(item))
+                        .textSelection(.enabled)
+                } else if let dict = item as? [String: Any] {
+                    JSONTreeView(object: dict)
+                } else {
+                    Text(JSONFormatter.format(item))
+                        .font(AppTheme.Fonts.mono)
+                        .foregroundColor(.primary)
+                        .textSelection(.enabled)
                 }
             }
         }
