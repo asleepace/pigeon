@@ -10,9 +10,22 @@
 		26C8DB492F12A55C000FD529 /* Pigeon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pigeon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		26C8DB762F14B08C000FD529 /* Exceptions for "Pigeon" folder in "Pigeon" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 26C8DB482F12A55C000FD529 /* Pigeon */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		26C8DB4B2F12A55C000FD529 /* Pigeon */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				26C8DB762F14B08C000FD529 /* Exceptions for "Pigeon" folder in "Pigeon" target */,
+			);
 			path = Pigeon;
 			sourceTree = "<group>";
 		};
@@ -266,6 +279,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Pigeon/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Pigeon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -325,6 +339,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Pigeon/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Pigeon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

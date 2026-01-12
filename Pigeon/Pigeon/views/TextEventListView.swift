@@ -1,5 +1,5 @@
 //
-//  EventListView.swift
+//  TextEventListView.swift
 //  Pigeon
 //
 //  Created by Colin Teahan on 1/10/26.
@@ -52,7 +52,25 @@ struct CodeBlock: View {
     }
 }
 
-struct EventListLoadingView: View {
+struct TextEventListLoadingView: View {
+    
+    func sendTestEvent() async {
+        do {
+            print("[test] sending test event: \(streamUrl)")
+            let response = try await fetch(
+                  streamUrl,
+                  method: .POST,
+                  headers: [
+                    "Content-Type": "text/plain"
+                  ],
+                  body: "Hello, world!",
+            )
+            response.debugPrint()
+        } catch {
+            print("[ERROR] \(error)")
+        }
+    }
+    
     var streamName: String
     var streamUrl: String
     var body: some View {
@@ -63,12 +81,23 @@ struct EventListLoadingView: View {
                 description: Text("Waiting for incoming events, to get started make an http request to the following endpoint:")
             )
             CodeLine(code: "curl -d \"hello, world\" \(streamUrl)")
+            
+            Button("Send Event") {
+                Task {
+                    await sendTestEvent()
+                }
+            }
+            .padding(.horizontal, 8.0)
+            .padding(.vertical, 4.0)
+            .background(Color.blue)
+            .foregroundStyle(Color.white)
+            .cornerRadius(4)
         }
     }
 }
 
 
-struct EventListView: View {
+struct TextEventListView: View {
     let stream: StreamConnection
     @EnvironmentObject var streamManager: StreamManager
     
@@ -79,7 +108,7 @@ struct EventListView: View {
     var body: some View {
         ScrollViewReader { proxy in
             if messages.isEmpty {
-                EventListLoadingView(streamName: stream.name, streamUrl: stream.url)
+                TextEventListLoadingView(streamName: stream.name, streamUrl: stream.url)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.bottom, 44.0)
             } else {

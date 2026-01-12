@@ -135,7 +135,8 @@ class HttpServer {
     private var delegate: HttpDelegate
     
     private(set) var sseClients: [Response] = []
-    
+    private let queue: DispatchQueue = DispatchQueue(label: "com.pigeon.httpserver", qos: .userInteractive)
+
     let port: NWEndpoint.Port
     var url: URL?
     
@@ -147,8 +148,9 @@ class HttpServer {
     func handleSSE(connection: NWConnection) {
         let client = Response(connection: connection)
         self.sseClients.append(client)
-        self.delegate.httpServer(self, didConnect: client)
-        
+        DispatchQueue.main.async {
+            self.delegate.httpServer(self, didConnect: client)
+        }
         // Monitor for disconnect
         connection.stateUpdateHandler = { [weak self] state in
             if case .cancelled = state {
@@ -162,7 +164,7 @@ class HttpServer {
     func connect() throws {
         self.listener = try NWListener(using: .tcp, on: port)
         self.listener?.newConnectionHandler = { [weak self] connection in
-            connection.start(queue: .main)
+            connection.start(queue: self!.queue)  // ← background queue
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, _ in
                 guard let self, let request = try? HttpRequest(data) else { return }
                 
@@ -173,13 +175,15 @@ class HttpServer {
                 }
                 
                 // otherwise handle as a normal response:
-                let response = self.delegate.httpServer(self, didReceiveRequest: request)
-                connection.send(content: response.toData(), completion: .contentProcessed { _ in
-                    connection.cancel()
-                })
+                DispatchQueue.main.async {
+                    let response = self.delegate.httpServer(self, didReceiveRequest: request)
+                    connection.send(content: response.toData(), completion: .contentProcessed { _ in
+                        connection.cancel()
+                    })
+                }
             }
         }
-        self.listener?.start(queue: .main)
+        self.listener?.start(queue: queue)
         self.url = URL(string: "http://localhost:\(port)")!
     }
     
@@ -192,7 +196,9 @@ class HttpServer {
     
     private func removeClient(_ client: Response) {
         sseClients.removeAll { $0.id == client.id }
-        self.delegate.httpServer(self, didDisconnect: client)
+        DispatchQueue.main.async {
+            self.delegate.httpServer(self, didDisconnect: client)
+        }
     }
     
     func broadcast(event: String? = nil, data: String, id: String? = nil) {

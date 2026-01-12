@@ -149,9 +149,9 @@ func fetch<T: Encodable>(
     Task {
         do {
             let response = try await fetch(href, method: method, headers: headers, body: body)
-            completion(.success(response))
+            await MainActor.run { completion(.success(response)) }
         } catch {
-            completion(.failure(error))
+            await MainActor.run { completion(.failure(error)) }
         }
     }
 }
