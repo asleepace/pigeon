@@ -44,6 +44,18 @@ class StreamManager: ObservableObject, TextEventStreamDelegate, HttpDelegate {
     private var reconnectAttempt = 0
     private let maxReconnectAttempts = 10
     private let baseReconnectDelay: TimeInterval = 1.0
+    private var namedPipeReader: NamedPipeReader? = nil
+    
+    init() {
+        do {
+            self.namedPipeReader = try NamedPipeReader()
+            try self.namedPipeReader?.start { pipeData in
+                print("[StreamManager] pipeData: \(pipeData)")
+            }
+        } catch {
+            print("[StreamManager] failed to initialize NamedPipeReader: \(error)")
+        }
+    }
 
     // MARK: - Event Access
 
